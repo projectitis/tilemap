@@ -2,9 +2,13 @@
 Tilemap helpers and code, aimed at microprocessors
 
 ## mac
- This file is part of the mac (or μac) "Microprocessor App Creator" library.
- mac is a project that enables creating beautiful and useful apps on the [Teensy microprocessor](https://www.pjrc.com/teensy/), but hopefully is generic enough to be ported to other microprocessor boards. The various libraries that make up mac (includign this one) might also be useful in other projects.
- 
+This file is part of the mac (or μac) "Microprocessor App Creator" library.
+mac is a project that enables creating beautiful and useful apps on the [Teensy microprocessor](https://www.pjrc.com/teensy/), but hopefully is generic enough to be ported to other microprocessor boards. The various libraries that make up mac (includign this one) might also be useful in other projects.
+
+# Status
+**Work in progress! Use at own risk.**
+mac is still in development. Once it's ready for alpha release, I'll be updating this file to link to the full library for your pleasure :) 
+
 ## tilemap (tilemap_to_h.py)
 `Bitmap.h` contains a tilemap type (`Tilemap`) that describes pixels packed into a tile map in a header file. There is a script (`tilemap_to_h.py`) to convert images to the tilemap format. When it is run it will convert all images in the same directory into tilemaps, each with it's own .h file. Options for the script can be specified in the file name of the image. For example:
  
