@@ -64,7 +64,17 @@ import re
 #						Examples:
 #						character_sprites.t-8x16.p-565.png
 #						gui_icons.t-24x24.p-ARGB8888.png
-#
+#						
+#				a-___
+#						If the pixel format does not support an alpha channel, specify a colour to be
+#						treated as a fully transparent color (for on/off alpha). This can be specified as
+#						any of the following:
+#						a-FF00FF		A hexideciaml color value that matches the pixel format. Do NOT
+#										start with 0x		
+#						a-10x12			NOT YET SUPPORTED: The coordinates of a pixel within the image. The color
+#										of that pixel will be used as the transparent color. Most often
+#										this is 0x0 (top-left).
+#									
 	
 # Define some pixel formatting functions
 # 565 as two 8-bit unsigned int
@@ -98,6 +108,16 @@ def pixel8565( a, r, g, b ):
 # 8888 as four 8-bit unsigned ints 
 def pixel8888( a, r, g, b ):
 	return [int(a), int(r), int(g), int(b)]
+
+# Pixel transformations
+convertPixelFuncs = {
+    'RGB565': pixel565,
+    'RGB888': pixel888,
+    'ARGB4444': pixel4444,
+    'ARGB6666': pixel6666,
+    'ARGB8565': pixel8565,
+    'ARGB8888': pixel8888
+}
 
 # slugify a string
 def slugify(text):
@@ -143,7 +163,7 @@ for file in list(resources):
 		# Some useful messages to console
 		print()
 		print('Processing',filename,'(image)')
-		print('  Source image mode:',im.mode)
+		print('  Source image mode is',im.mode)
 		
 		# Pixel format
 		# Option: p-___
@@ -173,6 +193,14 @@ for file in list(resources):
 			"RGB565": 'mac::PF_565',
 			"RGB888": 'mac::PF_888'
 		}
+		pfTransparentColor = {
+			"ARGB4444": '0',
+			"ARGB6666": '0',
+			"ARGB8565": '0',
+			"ARGB8888": '0',
+			"RGB565": 'mac::RGB565_Transparent',
+			"RGB888": 'mac::RGB888_Transparent'
+		}
 		pfmt = 'RGB565';
 		if 'p' in options:
 			pfmt = options['p']
@@ -185,7 +213,7 @@ for file in list(resources):
 			pfmt = pfAlpha[pfmt]
 		elif pfmt in pfSolid.keys():
 			pfmt = pfSolid[pfmt]
-		print('  Using destination pixel format:',pfmt)
+		print('  Using destination pixel format',pfmt)
 		if (not alpha) and (pfmt in pfAlpha.values() or pfmt in pfAlpha.keys()):
 			print('  WARNING: Source image does not contain alpha channel. Alpha will be set to full. This may result in a larger file than intended?')
 		
@@ -194,7 +222,16 @@ for file in list(resources):
 		tilewidth, tileheight = width, height
 		rows, cols = 1, 1
 		tilesize = tilewidth*tileheight
-		
+
+		# transparent color
+		trns = pfTransparentColor[pfmt];
+		if not trns == '0':
+			if 'a' in options:
+				trns = '0x'+options['a']
+				print('  Setting transparent color',trns)
+			else:
+				print('  Assuming transparent color',trns)
+
 		# Option: t-__x__
 		# Are we splitting the image in to tiles?
 		if 't' in options:
@@ -211,20 +248,10 @@ for file in list(resources):
 					
 		# Holds pixel data
 		p = [];
-
-		# Pixel transformations
-		convertPixel = {
-	        'RGB565': pixel565,
-	        'RGB888': pixel888,
-	        'ARGB4444': pixel4444,
-	        'ARGB6666': pixel6666,
-	        'ARGB8565': pixel8565,
-	        'ARGB8888': pixel8888
-	    }
 		
 		# steps tiles
 		a = 255
-		convertFunc = convertPixel[pfmt]
+		convertFunc = convertPixelFuncs[pfmt]
 		for row in range(rows):
 			for col in range(cols):
 				# step pixels in tile
@@ -264,6 +291,7 @@ for file in list(resources):
 		
 		# typedef struct {
 		# 	uint8_t pixelFormat;
+		# 	uint32_t transparentColor;
 		# 	uint32_t dataSize;
 		# 	uint8_t* data;
 		# 	uint32_t tileWidth;
@@ -273,6 +301,7 @@ for file in list(resources):
 		# } Tilemap;
 		outstr += 'const mac::Tilemap '+name+' = {\n'
 		outstr += '\t.pixelFormat = '+pfCodes[pfmt]+',\n'
+		outstr += '\t.transparentColor = '+trns+',\n'
 		outstr += '\t.dataSize = '+str(tp)+',\n'
 		outstr += '\t.data = '+name+'_data,\n'
 		outstr += '\t.tileWidth = '+str(tilewidth)+',\n'

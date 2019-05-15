@@ -26,8 +26,6 @@
  * SOFTWARE.
  */	
 
-
-
 #pragma once
 #ifndef _MAC_BITMAPH_
 #define _MAC_BITMAPH_ 1
@@ -44,37 +42,37 @@ namespace mac{
 	 * Defines a color as a RGB565 16bit unsigned int
 	 * RRRRRGGGGGGBBBBB
 	 **/
-	typedef uint16_t colorRGB565;
+	typedef uint16_t color565;
 
 	/**
 	 * Defines a color as a RGBA4444 16bit unsigned int
 	 * aaaaRRRRGGGGBBBB
 	 **/
-	typedef uint16_t colorARGB4444;
+	typedef uint16_t color4444;
 
 	/**
 	 * Defines a color as ARGB8565 24bit total, with 8-bit alpha and packed 16-bit RGB565
 	 * ........aaaaaaaaRRRRRGGGGGGBBBBB
 	 **/
-	typedef uint32_t colorARGB8565;
+	typedef uint32_t color8565;
 
 	/**
 	 * Defines a color as ARGB6666 24bit total, with 6-bit alpha and 6-bits per color
 	 * ........aaaaaaRRRRRRGGGGGGBBBBBB
 	 **/
-	typedef uint32_t colorARGB6666;
+	typedef uint32_t color6666;
 
 	/**
 	 * Defines a color as standard 24-bit RGB
 	 * ........RRRRRRRRGGGGGGGGBBBBBBBB
 	 **/
-	typedef uint32_t colorRGB;
+	typedef uint32_t color888;
 	
 	/**
 	 * Defines a color as packed ARGB components
 	 * aaaaaaaaRRRRRRRRGGGGGGGGBBBBBBBB
 	 **/
-	typedef uint32_t colorARGB;
+	typedef uint32_t color8888;
 	
 	/**
 	 * Defines alpha as a float (0.0 to 1.0)
@@ -385,7 +383,10 @@ namespace mac{
 		PF_6666 			= 3,	// ARGB 6666	6 bits alpha, 6 bits each color channel (24 bits total)
 		PF_8565 			= 4,	// ARGB 8565	565 with leading 8-bit alpha (24 bits total)
 		PF_888				= 5,	//  RGB 888		24-bit color, no alpha
-		PF_8888				= 6		// ARGB 8888	32-bit color with leading b-bit alpha
+		PF_8888				= 6,	// ARGB 8888	32-bit color with leading b-bit alpha
+		PF_INDEXED			= 7,	// 				Indexed color (0-255)
+		PF_MONO				= 8,	// 				Mono (on/off) color
+		PF_GRAYSCALE		= 9		// 				256 levels of gray (intensity)
 	} PixelFormat;
 
 	/**
@@ -393,6 +394,7 @@ namespace mac{
 	 **/
 	typedef struct BitmapS {
 		PixelFormat pixelFormat;			// The format of each pixel
+		uint32_t transparentColor;			// For non-alpha pixel formats, the color to treat as fully transparent. Usually fuchsia.
 		uint32_t dataSize;					// The total number of bytes in the data
 		const uint8_t* data __attribute__ ((aligned (4))); // Data, aligned to 4-byte boundary
 	} Bitmap;
@@ -402,6 +404,7 @@ namespace mac{
 	 **/
 	typedef struct TilemapS {
 		PixelFormat pixelFormat;			// The format of each pixel
+		uint32_t transparentColor;			// For non-alpha pixel formats, the color to treat as fully transparent. Usually fuchsia.
 		uint32_t dataSize;					// The total number of bytes in the data
 		const uint8_t* data __attribute__ ((aligned (4))); // Data, aligned to 4-byte boundary
 		uint32_t tileWidth;					// Width of each tile in the map
@@ -409,213 +412,6 @@ namespace mac{
 		uint32_t tileCount;					// Number of tiles in the map
 		uint32_t tileStride;				// Stride of each tile in bytes
 	} Tilemap;
-
-	/**
-	 * The following functions get a pixel from a bitmap and convert to RGB565 and 6-bit alpha.
-	 * Use these functions if you are using the fast alpha-blending function below that requires
-	 * 6-bit alpha. If you are using libraries that require 8-bit alpha, use the ...as8565 functions
-	 * instead.
-	 */
-	inline void get565as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		c = *((uint16_t*)p); // Careful! Must always be on a 16-bit boundary
-	}
-	inline void get4444as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		uint16_t* pp = (uint16_t*)p; // Careful! Must always be on a 16-bit boundary
-		a = ((*pp >> 10) & 0b111100 ) | ((*pp >> 14) &0b000011); // 6-bit alpha
-		c = ((*pp & 0b111100000000) << 5) | (*pp & 0b100000000000) //R
-			| ((*pp & 0b11110000) << 1) | ((*pp & 0b11000000) >> 1) //G
-			| ((*pp & 0b1111) << 3) | ((*pp & 0b1000) >> 3); // B
-	}
-	inline void get6666as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		a = (p[0] >> 2); // Already 6-bit alpha
-		c = (p[0] << 14) | ((p[1] << 6) & 0b0011100000000000) | ((p[1] << 7) & 0b0000011110000000) | ((p[1] >> 1) & 0b0000000001111111);
-	}
-	inline void get8565as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		a = (p[0] >> 3); // 8-bit to 6-bit alpha
-		c = (p[1] << 8) | p[2];
-	}
-	inline void get888as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		c = ((p[0] & 0b11111000) << 8) | ((p[1] & 0b11111100) << 3) | ((p[1] & 0b11111000) >> 3);
-	}
-	inline void get8888as6565( uint8_t* p, uint16_t& c, uint8_t& a ){
-		a = (p[0] >> 3); // 8-bit to 6-bit alpha
-		c = ((p[1] & 0b11111000) << 8) | ((p[2] & 0b11111100) << 3) | ((p[3] & 0b11111000) >> 3);
-	}
-
-	/**
-	 * Use getAccessor6565 on a tilemap to choose the correct data access function.
-	 */
-	typedef void (access6565*)( uint8_t*, uint16_t&, uint8_t& );
-	access6565 getAccessor6565( Tilemap* tilemap ){
-		switch (tilemap->pixelFormat){
-			case mac::PF_565: return get565as6565;
-			case mac::PF_4444: return get4444as6565;
-			case mac::PF_6666: return get6666as6565;
-			case mac::PF_8565: return get8565as6565;
-			case mac::PF_888: return get888as6565;
-			case mac::PF_8888: return get8888as6565;
-		}
-		return 0;
-	}
-
-	/**
-	 * The following functions get a pixel from the bitmap and convert to R,G,B and 8-bit alpha.
-	 */
-	inline void get565as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		uint16_t* pp = (uint16_t*)p; // Careful! Must always be on a 16-bit boundary
-		r = ((*pp >> 8) & 0b11111000) | ((*pp >> 13) & 0b111);
-		g = ((*pp >> 3) & 0b11111100) | ((*pp >> 9) & 0b11);
-		b = ((*pp << 3) & 0b11111000) | ((*pp >> 2) & 0b111);
-	}
-	inline void get4444as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		uint16_t* pp = (uint16_t*)p; // Careful! Must always be on a 16-bit boundary
-		a = ((*pp >> 8) & 0b11110000 ) | (*pp >> 12);
-		r = ((*pp >> 4) & 0b11110000) | ((*pp >> 8) & 0b1111);
-		g = (*pp & 0b11110000) | ((*pp >> 4) & 0b1111);
-		b = ((*pp << 4) & 0b11110000) | (*pp & 0b1111);
-	}
-	inline void get6666as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		a = (p[0] & 0b11111100 ) | ((p[0] >> 6) & 0b11);
-		r = ((p[0] << 6) & 0b11000000) | (p[0] & 0b11) | ((p[1]>>2) & 0b111100);
-		g = ((p[1] << 4) & 0b11110000) | ((p[1] >> 2) & 0b11) | ((p[2]>>4) & 0b1100);
-		b = ((p[2] << 2) & 0b11111100) | ((p[2] >> 4) & 0b11);
-	}
-	inline void get8565as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		a = p[0];
-		r = (p[1] & 0b11111000) | ((p[1] >> 5) & 0b111);
-		g = ((p[1] << 5) & 0b11100000) | ((p[1] >> 1) & 0b11) | ((p[2] >> 3) & 0b11100);
-		b = ((p[2] << 3) & 0b11111000) | ((p[2] >> 2) & 0b111);
-	}
-	inline void get888as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		r = p[0];
-		g = p[1];
-		b = p[2];
-	}
-	inline void get8888as8888( uint8_t* p, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a ){
-		a = p[0];
-		r = p[1];
-		g = p[2];
-		b = p[3];
-	}
-
-	/**
-	 * Use getAccessor8888 on a tilemap to choose the correct data access function.
-	 */
-	typedef void (access8888*)( uint8_t*, uint8_t&, uint8_t&, uint8_t&, uint8_t& );
-	access8888 getAccessor8888( Tilemap* tilemap ){
-		switch (tilemap->pixelFormat){
-			case mac::PF_565: return get565as8888;
-			case mac::PF_4444: return get4444as8888;
-			case mac::PF_6666: return get6666as8888;
-			case mac::PF_8565: return get8565as8888;
-			case mac::PF_888: return get888as8888;
-			case mac::PF_8888: return get8888as8888;
-		}
-		return 0;
-	}
-
-	/**
-	 * Faster accessor if ARGB 32-bit word is required
-	 */
-	inline void get8888asARGB( uint8_t*p, uint32_t& c ){
-		c = *((uint32_t*)p);
-	}
-	
-	/**
-	 * Found in a pull request for the Adafruit framebuffer library. Clever!
-	 * https://github.com/tricorderproject/arducordermini/pull/1/files#diff-d22a481ade4dbb4e41acc4d7c77f683d
-	 * Converts  0000000000000000rrrrrggggggbbbbb
-	 *     into  00000gggggg00000rrrrr000000bbbbb
-	 * with mask 00000111111000001111100000011111
-	 * This is useful because it makes space for a parallel fixed-point multiply
-	 * This implements the linear interpolation formula: result = bg * (1.0 - alpha) + fg * alpha
-	 * This can be factorized into: result = bg + (fg - bg) * alpha
-	 * alpha is in Q1.5 format, so 0.0 is represented by 0, and 1.0 is represented by 32
-	 * @param	fg		Color to draw in RGB565 (16bit)
-	 * @param	bg		Color to draw over in RGB565 (16bit)
-	 * @param	alpha	Alpha 0 - 31. If in range 0-255, first use alpha = ( alpha + 4 ) >> 3; to reduce to 0-31
-	 **/
-	inline colorRGB565 alphaBlendRGB565(
-		uint32_t fg,
-		uint32_t bg,
-		uint8_t alpha
-	){
-		bg = (bg | (bg << 16)) & 0b00000111111000001111100000011111;
-		fg = (fg | (fg << 16)) & 0b00000111111000001111100000011111;
-		uint32_t result = ((((fg - bg) * alpha) >> 5) + bg) & 0b00000111111000001111100000011111;
-		return (colorRGB565)((result >> 16) | result); // contract result
-	}
-	
-	/**
-	 * Convert individual RGB values to RGB565 16bit format
-	 * @param	r		Red component
-	 * @param	g		Green component
-	 * @param	b		Blue component
-	 **/
-	inline colorRGB565 convertRGBto565(
-		uint8_t r,
-		uint8_t g,
-		uint8_t b
-	){
-		return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-	}
-
-	/**
-	 * Convert colorARGB 32bit to RGB565 16bit format
-	 * @param	rgb		The RGB 24-bit colour (alpha is ignored)
-	 **/
-	inline colorRGB565 convertRGBto565(
-		colorRGB rgb
-	){
-		return (((rgb >> 16) & 0xF8) << 8) | (((rgb >> 8) & 0xFC) << 3) | ((rgb && 0xF8) >> 3);
-	}
-
-	/**
-	 * Convert 32-bit colorARGB to 16-bit RGB565 format and alpha
-	 * @param	argb		The ARGB 32-bit colour
-	 * @param	alpha 		(out) The 8-bit alpha (0-255)
-	 **/
-	inline colorRGB565 convertARGBtoA565(
-		colorARGB argb,
-		uint8_t &alpha
-	){
-		alpha = (argb>>24) & 0xFF;
-		return (((argb >> 16) & 0xF8) << 8) | (((argb >> 8) & 0xFC) << 3) | ((argb && 0xF8) >> 3);
-	}
-	
-	/**
-	 * Converts RGB565 format to individual RGB color components
-	 * @param	color	The RGB565 color to convert
-	 * @param	r		(out) Red component
-	 * @param	g		(out) Green component
-	 * @param	b		(out) Blue component
-	 **/
-	inline void convert565toRGBComponents(
-		colorRGB565 color,
-		uint8_t &r,
-		uint8_t &g,
-		uint8_t &b
-	){
-		r = ((color >> 8) & 0b11111000) | ((color >> 13) & 0b111);
-		g = ((color >> 3) & 0b11111100) | ((color >> 9) & 0b11);
-		b = ((color << 3) & 0b11111000) | ((color >> 2) & 0b111);
-	}
-
-	/**
-	 * Calculate the pre-multiplied value of an RGB565 color for fast blending
-	 * @param color  	RGB565 color
-	 */
-	inline uint32_t colorRGB565Premultiply( colorRGB565 color ){
-		return (((uint32_t)color | ((uint32_t)color << 16)) & 0b00000111111000001111100000011111);
-	}
-
-	/**
-	 * Calculate the pre-multiplied value of a 24-bit RGB color for fast blending
-	 * @param color  	RGB565 color
-	 */
-	inline uint32_t colorRGBPremultiply( colorRGB color ){
-		return ((color & 0xF80000) >> 8) | ((color & 0xFC00) << 11) | ((color & 0xF8) >> 3);
-	}
 
 	/**
 	 * Clamp alpha to range 0.0 - 1.0
@@ -627,16 +423,513 @@ namespace mac{
 	}
 
 	/**
+	 *  ######   #####  ######
+	 *  ##      ##      ##
+	 *  #####   #####   #####
+	 *      ##  ##  ##      ##
+	 *  #####    ####   #####
+	 */
+	
+	/*
+	 * ### BITMAP ACCESS
+	 */
+
+	/**
+	 * The following functions get a pixel from a bitmap and convert to RGB565 and 5-bit alpha.
+	 * Use these functions if you are using the fast alpha-blending function below that requires
+	 * 5-bit alpha (0-31). If you are using libraries that require 8-bit alpha, use the ...as8565
+	 * functions instead.
+	 */
+	void get565as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = (p[0] << 8) | p[1];
+	}
+	void get4444as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = ((p[0] >> 3) & 0b11110) | ((p[0] >> 7) & 0b1); // 5-bit alpha
+		c = ((p[0] & 0b1111) << 12) | ((p[0] & 0b1000) << 8)
+			| ((p[1] & 0b11110000) << 3) | ((p[1] & 0b11000000) >> 1)
+			| ((p[1] & 0b1111) << 1) | ((p[1] & 0b1000) >> 3);
+	}
+	void get6666as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = (p[0] >> 3); // 5-bit alpha
+		c = (p[0] << 14) | ((p[1] << 6) & 0b0011100000000000) | ((p[1] << 7) & 0b0000011110000000) | ((p[1] >> 1) & 0b0000000001111111);
+	}
+	void get8565as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = (p[0] >> 3); // 8-bit to 5-bit alpha
+		c = (p[1] << 8) | p[2];
+	}
+	void get888as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = ((p[0] & 0b11111000) << 8) | ((p[1] & 0b11111100) << 3) | ((p[1] & 0b11111000) >> 3);
+	}
+	void get8888as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = (p[0] >> 3); // 8-bit to 5-bit alpha
+		c = ((p[1] & 0b11111000) << 8) | ((p[2] & 0b11111100) << 3) | ((p[3] & 0b11111000) >> 3);
+	}
+	void get8as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = ((p[0] & 0xF8) << 8) | ((p[0] & 0xFC) << 3) | ((p[0] & 0xF8) >> 3);
+	}
+	void get1as5565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		// Hijack 'a' as bit index (0-7 from left to right)
+		c = ((p[0] >> (7-a)) & 0b1)?RGB565_White:RGB565_Black;
+	}
+
+	/**
+	 * Use getAccessor6565 on a tilemap to choose the correct data access function.
+	 */
+	typedef void (*access5565)( uint8_t*, uint16_t&, uint8_t& );
+	access5565 getAccessor5565( Tilemap* tilemap ){
+		switch (tilemap->pixelFormat){
+			case mac::PF_565: return get565as5565;
+			case mac::PF_4444: return get4444as5565;
+			case mac::PF_6666: return get6666as5565;
+			case mac::PF_8565: return get8565as5565;
+			case mac::PF_888: return get888as5565;
+			case mac::PF_8888: return get8888as5565;
+			case mac::PF_GRAYSCALE: return get8as5565;
+			case mac::PF_MONO: return get1as5565;
+			case mac::PF_INDEXED: return 0;	// XXX: Handle indexed colors
+			case mac::PF_UNKNOWN: return 0;	
+		}
+		return 0;
+	}
+
+	/**
+	 * The following functions get a pixel from a bitmap and convert to RGB565 and 8-bit alpha.
+	 */
+	void get565as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = (p[0] << 8) | p[1];
+	}
+	void get4444as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = (p[0] & 0b11110000) | (p[0] >> 4); // 8-bit alpha
+		c = ((p[0] & 0b1111) << 12) | ((p[0] & 0b1000) << 8)
+			| ((p[1] & 0b11110000) << 3) | ((p[1] & 0b11000000) >> 1)
+			| ((p[1] & 0b1111) << 1) | ((p[1] & 0b1000) >> 3);
+	}
+	void get6666as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = (p[0] & 0b11111100) | ((p[0] >> 6) & 0b11);
+		c = (p[0] << 14) | ((p[1] << 6) & 0b0011100000000000) | ((p[1] << 7) & 0b0000011110000000) | ((p[1] >> 1) & 0b0000000001111111);
+	}
+	void get8565as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = p[0]; // Already 8-bit alpha
+		c = (p[1] << 8) | p[2];
+	}
+	void get888as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = ((p[0] & 0b11111000) << 8) | ((p[1] & 0b11111100) << 3) | ((p[1] & 0b11111000) >> 3);
+	}
+	void get8888as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		a = p[0]; // Already 8-bit alpha
+		c = ((p[1] & 0b11111000) << 8) | ((p[2] & 0b11111100) << 3) | ((p[3] & 0b11111000) >> 3);
+	}
+	void get8as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		c = ((p[0] & 0xF8) << 8) | ((p[0] & 0xFC) << 3) | ((p[0] & 0xF8) >> 3);
+	}
+	void get1as8565( uint8_t* p, uint16_t& c, uint8_t& a ){
+		// Hijack 'a' as bit index (0-7 from left to right)
+		c = ((p[0] >> (7-a)) & 0b1)?RGB565_White:RGB565_Black;
+	}
+
+	/**
+	 * Use getAccessor8565 on a tilemap to choose the correct data access function.
+	 */
+	typedef void (*access8565)( uint8_t*, uint16_t&, uint8_t& );
+	access8565 getAccessor8565( Tilemap* tilemap ){
+		switch (tilemap->pixelFormat){
+			case mac::PF_565: return get565as8565;
+			case mac::PF_4444: return get4444as8565;
+			case mac::PF_6666: return get6666as8565;
+			case mac::PF_8565: return get8565as8565;
+			case mac::PF_888: return get888as8565;
+			case mac::PF_8888: return get8888as8565;
+			case mac::PF_GRAYSCALE: return get8as8565;
+			case mac::PF_MONO: return get1as8565;
+			case mac::PF_INDEXED: return 0;	// XXX: Handle indexed colors
+			case mac::PF_UNKNOWN: return 0;
+		}
+		return 0;
+	}
+
+	/*
+	 * ### CONVERSION
+	 */
+
+	/**
+	 * Convert individual RGB values to RGB565 16bit format
+	 * @param	r		Red component
+	 * @param	g		Green component
+	 * @param	b		Blue component
+	 **/
+	inline color565 convertRGBto565(
+		uint8_t r,
+		uint8_t g,
+		uint8_t b
+	){
+		return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+	}
+
+	/**
+	 * Convert 32-bit ARGB to 16-bit RGB565 format and 8-bit alpha
+	 * @param	colour		The ARGB 32-bit colour
+	 * @param	alpha 		(out) The 8-bit alpha (0-255)
+	 **/
+	inline color565 convert8888to8565(
+		color8888 c,
+		uint8_t &alpha
+	){
+		alpha = c>>24;
+		return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x1F);
+	}
+
+	/**
+	 * Convert 32-bit ARGB to 16-bit RGB565 format and 5-bit alpha
+	 * @param	c			The ARGB 32-bit colour
+	 * @param	alpha 		(out) The 5-bit alpha (0-31)
+	 **/
+	inline color565 convert8888to5565(
+		color8888 c,
+		uint8_t &alpha
+	){
+		alpha = c>>27;
+		return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x1F);
+	}
+
+	/**
+	 * Convert ARGB 32bit to RGB565 16bit format
+	 * @param	c			The RGB 24-bit colour (alpha is ignored)
+	 **/
+	inline color565 convert888to565(
+		color888 c
+	){
+		return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x1F);
+	}
+
+	/**
+	 * Convert grayscale 8-bit to RGB565 16-bit format
+	 * @param	c			The grayscale color (0-255)
+	 **/
+	inline color565 convert8to565(
+		uint8_t c
+	){
+		return ((c & 0xF8) << 8) | ((c & 0xFC) << 3) | ((c & 0xF8) >> 3);
+	}
+
+	/**
+	 * Convert mono 1-bit to RGB565 16-bit format
+	 * @param	c			The mono color (0,1)
+	 **/
+	inline color565 convert1to565(
+		uint8_t c
+	){
+		return (c & 0b1)?RGB565_White:RGB565_Black;
+	}
+
+	/**
+	 * Convert HSV to components
+	 * @param  H 	Hue component
+	 * @param  S  	Saturation component
+	 * @param  V 	Value component
+	 */
+	inline color565 convertHSVto565(
+		float H,
+		float S,
+		float V
+	){
+		float		p, q, t, ff;
+		int8_t		i;
+		float		r,g,b;
+
+		if (H >= 360.0) H = 0.0;
+		H /= 60.0;
+		i = (int8_t)H;
+		ff = H - i;
+		p = V * (1.0 - S);
+		q = V * (1.0 - (S * ff));
+		t = V * (1.0 - (S * (1.0 - ff)));
+
+		switch(i) {
+			case 0: r = V; g = t; b = p; break;
+			case 1: r = q; g = V; b = p; break;
+			case 2: r = p; g = V; b = t; break;
+			case 3: r = p; g = q; b = V; break;
+			case 4: r = t; g = p; b = V; break;
+			case 5:
+			default:
+				r = V; g = p; b = q; break;
+		}
+
+		return ((uint8_t)(r * 31.0f) << 11) | ((uint8_t)(g * 63.0f) << 5) | (uint8_t)(b * 31.0f);
+	}
+
+	/*
+	 * ### ALPHA BLENDING
+	 */
+
+	/**
+	 * Calculate the pre-multiplied value of an RGB565 color for fast blending
+	 * @param c  	RGB565 color
+	 */
+	inline uint32_t colorPrepare565( color565 c ){
+		return (((uint32_t)c | ((uint32_t)c << 16)) & 0b00000111111000001111100000011111);
+	}
+
+	/**
+	 * Calculate the pre-multiplied value of a 24-bit RGB color for 565 fast blending
+	 * @param c  	RGB888 color
+	 */
+	inline uint32_t colorPrepare565( color888 c ){
+		return ((c & 0xF80000) >> 8) | ((c & 0xFC00) << 11) | ((c & 0xF8) >> 3);
+	}
+
+	/**
+	 * Calculate the pre-multiplied value of 8-bit RGB color components for 565 fast blending.
+	 * @param r  		Red color component
+	 * @param g  		Green color component
+	 * @param b  		Blue color component
+	 */
+	inline uint32_t colorPrepare565( uint8_t r, uint8_t g, uint8_t b ){
+		return ((r & 0xF8) << 8) | ((g & 0xFC) << 19) | ((b & 0xF8) >> 3);
+	}
+
+	/**
 	 * Calculate the pre-multiplied value of alpha for fast blending. Converts to range 0-31
 	 * @param alpha  	Alpha value 0-255
 	 */
-	inline uint8_t alphaPremultiply( uint8_t alpha ){
-		return alpha >> 3;
+	inline uint8_t alpha5bit( uint8_t a ){
+		return a >> 3;
 	}
-	inline uint8_t alphaPremultiply( alpha a ){
-		return (uint8_t)( alphaClamp(a) * 0.03225806451612903225f );
+	inline uint8_t alpha5bit( alpha a ){
+		return (uint8_t)( alphaClamp(a) * 31 );
 	}
+
+	/**
+	 * Blend two 16-bit RGB565 colors. Alpha already in range 0-31 (5-bit).
+	 * @param	fg		Color to draw in RGB565 (16bit)
+	 * @param	bg		Color to draw over in RGB565 (16bit)
+	 * @param	a		Alpha 0 - 31. If in range 0-255, use alphaBlend8565
+	 **/
+	inline color565 alphaBlend5565(
+		uint32_t fg,
+		uint32_t bg,
+		uint8_t a
+	){
+		bg = (bg | (bg << 16)) & 0b00000111111000001111100000011111;
+		fg = (fg | (fg << 16)) & 0b00000111111000001111100000011111;
+		uint32_t result = ((((fg - bg) * a) >> 5) + bg) & 0b00000111111000001111100000011111;
+		return (color565)((result >> 16) | result); // contract result
+	}
+
+	/**
+	 * Blend two 16-bit RGB565 colors. Alpha in range 0-255.
+	 * @param	fg		Color to draw in RGB565 (16bit)
+	 * @param	bg		Color to draw over in RGB565 (16bit)
+	 * @param	a		Alpha 0 - 255. If in range 0-31, use alphaBlend5565
+	 **/
+	inline color565 alphaBlend8565(
+		uint32_t fg,
+		uint32_t bg,
+		uint8_t a
+	){
+		a = alpha5bit( a );
+		bg = (bg | (bg << 16)) & 0b00000111111000001111100000011111;
+		fg = (fg | (fg << 16)) & 0b00000111111000001111100000011111;
+		uint32_t result = ((((fg - bg) * a) >> 5) + bg) & 0b00000111111000001111100000011111;
+		return (color565)((result >> 16) | result); // contract result
+	}
+
+	/**
+	 * Slightly faster blending if the FG color has been pre-prepared.
+	 * @param  preparedFg 	Pre-prepared FG color (@see colorPrepare565)
+	 * @param  bg  			BG color
+	 * @param  a      		Alpha (5-bit, 0-31)
+	 * @return            	The blended color
+	 */
+	inline color565 alphaBlendPrepared5565(
+		uint32_t preparedFg,
+		uint32_t bg,
+		uint8_t a
+	){
+		bg = (bg | (bg << 16)) & 0b00000111111000001111100000011111;
+		uint32_t result = ((((preparedFg - bg) * a) >> 5) + bg) & 0b00000111111000001111100000011111;
+		return (color565)((result >> 16) | result); // contract result
+	}
+
+	/**
+	 *  #####    #####   #####
+	 *  ##  ##  ##       ##  ##
+	 *  #####   ##  ###  #####
+	 *  ##  ##  ##   ##  ##  ##
+	 *  ##  ##   ######  #####
+	 */
 	
+	/*
+	 * ### BITMAP ACCESS
+	 */
+
+	/**
+	 * The following functions get a pixel from the bitmap and convert to 8-bit per channel A,R,G,B components.
+	 */
+	void get565asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		r = (p[0] & 0b11111000) |  ((p[0] & 0b11100000) >> 5);
+		g = ((p[0] & 0b111) << 5) | ((p[1] & 0b11100000) >> 3) | ((p[0] & 0b11) >> 6);
+		b = ((p[1] & 0b11111) << 3) | ((p[1] & 0b11100) >> 2);
+	}
+	void get4444asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		a = (p[0] & 0b11110000) | (p[0] >> 4);
+		r = (p[0] << 4) | (p[0] & 0b1111);
+		g = (p[1] & 0b11110000) | (p[1] >> 4);
+		b = (p[1] << 4) | (p[1] & 0b1111);
+	}
+	void get6666asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		a = (p[0] & 0b11111100 ) | ((p[0] >> 6) & 0b11);
+		r = ((p[0] << 6) & 0b11000000) | (p[0] & 0b11) | ((p[1]>>2) & 0b111100);
+		g = ((p[1] << 4) & 0b11110000) | ((p[1] >> 2) & 0b11) | ((p[2]>>4) & 0b1100);
+		b = ((p[2] << 2) & 0b11111100) | ((p[2] >> 4) & 0b11);
+	}
+	void get8565asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		a = p[0];
+		r = (p[1] & 0b11111000) | ((p[1] >> 5) & 0b111);
+		g = ((p[1] << 5) & 0b11100000) | ((p[1] >> 1) & 0b11) | ((p[2] >> 3) & 0b11100);
+		b = ((p[2] << 3) & 0b11111000) | ((p[2] >> 2) & 0b111);
+	}
+	void get888asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		r = p[0];
+		g = p[1];
+		b = p[2];
+	}
+	void get8888asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		a = p[0];
+		r = p[1];
+		g = p[2];
+		b = p[3];
+	}
+	void get8asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		r = p[0];
+		g = p[0];
+		b = p[0];
+	}
+	void get1asARGB( uint8_t* p, uint8_t& a, uint8_t& r, uint8_t& g, uint8_t& b ){
+		// Hijack 'a' as bit index (0-7 from left to right)
+		r = g = b = ((p[0] >> (7-a)) & 0b1)?255:0;
+	}
+
+	/**
+	 * Use getAccessorARGB on a tilemap to choose the correct data access function.
+	 */
+	typedef void (*accessARGB)( uint8_t*, uint8_t&, uint8_t&, uint8_t&, uint8_t& );
+	accessARGB getAccessorARGB( Tilemap* tilemap ){
+		switch (tilemap->pixelFormat){
+			case mac::PF_565: return get565asARGB;
+			case mac::PF_4444: return get4444asARGB;
+			case mac::PF_6666: return get6666asARGB;
+			case mac::PF_8565: return get8565asARGB;
+			case mac::PF_888: return get888asARGB;
+			case mac::PF_8888: return get8888asARGB;
+			case mac::PF_GRAYSCALE: return get8asARGB;
+			case mac::PF_MONO: return get1asARGB;
+			case mac::PF_INDEXED: return 0;	// XXX: Handle indexed colors
+			case mac::PF_UNKNOWN: return 0;
+		}
+		return 0;
+	}
+
+	/*
+	 * ### CONVERSION
+	 */
+	
+	/**
+	 * Converts RGB565 format to individual RGB color components
+	 * @param	color	The RGB565 color to convert
+	 * @param	r		(out) Red component
+	 * @param	g		(out) Green component
+	 * @param	b		(out) Blue component
+	 **/
+	inline void convert565toRGB(
+		color565 color,
+		uint8_t &r,
+		uint8_t &g,
+		uint8_t &b
+	){
+		r = ((color >> 8) & 0b11111000) | ((color >> 13) & 0b111);
+		g = ((color >> 3) & 0b11111100) | ((color >> 9) & 0b11);
+		b = ((color << 3) & 0b11111000) | ((color >> 2) & 0b111);
+	}
+
+	/**
+	 * Converts RGB888 24-bit format to individual RGB color components
+	 * @param	color	The RGB888 color to convert
+	 * @param	r		(out) Red component
+	 * @param	g		(out) Green component
+	 * @param	b		(out) Blue component
+	 **/
+	inline void convert888toRGB(
+		color888 color,
+		uint8_t &r,
+		uint8_t &g,
+		uint8_t &b
+	){
+		r = color >> 16;
+		g = (color >> 8) & 0xFF;
+		b = color & 0xFF;
+	}
+
+	/**
+	 * Converts ARGB8888 32-bit format to individual A and RGB color components
+	 * @param	color	The RGB8888 color to convert
+	 * @param	a		(out) Alpha
+	 * @param	r		(out) Red component
+	 * @param	g		(out) Green component
+	 * @param	b		(out) Blue component
+	 **/
+	inline void convert8888toRGB(
+		color8888 color,
+		uint8_t &a,
+		uint8_t &r,
+		uint8_t &g,
+		uint8_t &b
+	){
+		a = color >> 24;
+		r = (color >> 16) & 0xFF;
+		g = (color >> 8) & 0xFF;
+		b = color & 0xFF;
+	}
+
+	/**
+	 * Converts grayscale 8-bit format to individual RGB color components
+	 * @param	color	The grayscale color to convert
+	 * @param	r		(out) Red component
+	 * @param	g		(out) Green component
+	 * @param	b		(out) Blue component
+	 */
+	inline void convert8toRGB(
+		uint8_t color,
+		uint8_t &r,
+		uint8_t &g,
+		uint8_t &b
+	){
+		r = color;
+		g = color;
+		b = color;
+	}
+
+	/**
+	 * Converts mono 1-bit format to individual RGB color components
+	 * @param	color	The mono color to convert (0,1)
+	 * @param	r		(out) Red component
+	 * @param	g		(out) Green component
+	 * @param	b		(out) Blue component
+	 */
+	inline void convert1toRGB(
+		uint8_t color,
+		uint8_t &r,
+		uint8_t &g,
+		uint8_t &b
+	){
+		if (color & 0b1){
+			r = 255; g = 255; b = 255;
+		}
+		else{
+			r = 0; g = 0; b = 0;
+		}
+	}
+
 	/**
 	 * Convert HSV to RGB components
 	 * @param  H 	Hue component
@@ -677,41 +970,257 @@ namespace mac{
 		}
 	}
 
+	/*
+	 * ### ALPHA BLENDING
+	 */
+
 	/**
-	 * Convert HSV to components
+	 * Fast alpha-blending of RGB color components
+	 * @param r1    First color R component
+	 * @param g1    First color G component
+	 * @param b1    First color B component
+	 * @param r2    Second color R component
+	 * @param g2    Second color G component
+	 * @param b2    Second color B component
+	 * @param alpha The alpha (0-255)
+	 * @param r     (out) Blended R component
+	 * @param g     (out) Blended G component
+	 * @param b     (out) Blended B component
+	 */
+	inline void alphaBlendARGB(
+		uint8_t r1, uint8_t g1, uint8_t b1,
+		uint8_t r2, uint8_t g2, uint8_t b2,
+		uint8_t alpha,
+		uint8_t& r, uint8_t& g, uint8_t& b
+	){
+		uint32_t rb = (r1 << 16) | b1;
+		uint32_t g0  = g1 << 8;
+		rb += (((r2 << 16) | b2) - rb) * alpha >> 8;
+		g0  += ((g2 << 8) -  g0) * alpha >> 8;
+		r = ((rb >> 16) & 0xff);
+		g = ((g0 >> 8) & 0xff);
+		b = (rb & 0xff);
+	}
+
+	/**
+	 *   #####    #####    #####
+	 *  ##   ##  ##   ##  ##   ##
+	 *   #####    #####    #####
+	 *  ##   ##  ##   ##  ##   ##
+	 *   #####    #####    #####
+	 */
+	
+	/*
+	 * ### BITMAP ACCESS
+	 */
+
+	/**
+	 * The following functions get a pixel from the bitmap and convert to 32-bit ARGB value
+	 */
+	void get565as8888( uint8_t* p, uint32_t& c ){
+		c = (255 << 24)
+			| ((p[0] & 0b11111000) << 16) |  ((p[0] & 0b11100000) << 11) // R
+			| ((p[0] & 0b111) << 13) | ((p[1] & 0b11100000) << 5) | ((p[0] & 0b11) << 2) // G
+			| ((p[1] & 0b11111) << 3) | ((p[1] & 0b11100) >> 2); // B
+	}
+	void get4444as8888( uint8_t* p, uint32_t& c ){
+		c = ((p[0] & 0b11110000) << 24) | (p[0] << 20) | ((p[0] & 0b1111) << 16) | ((p[1] & 0b11110000) << 8) | (p[1] << 4) | (p[1] & 0b1111);
+	}
+	void get6666as8888( uint8_t* p, uint32_t& c ){
+		c = ((p[0] & 0b11111100 ) << 24) | ((p[0] & 0b11000000) << 18) // A
+			| ((p[0] & 0b11) << 22) | ((p[0] & 0b11) << 16) | ((p[1] & 0b11110000) << 14) // R
+			| ((p[1] & 0b1111) << 12) | ((p[1] & 0b1100) << 6) | ((p[2] & 0b11000000) << 4) // G
+			| ((p[2] & 0b111111) << 2) | ((p[2] & 0b110000) >> 4); // B
+	}
+	void get8565as8888( uint8_t* p, uint32_t& c ){
+		c = (p[0] << 24) // A
+			| ((p[1] & 0b11111000) << 16) | ((p[1] & 0b11100000) << 11) // R
+			| ((p[1] & 0b111) << 13) | ((p[1] & 0b110) << 7) | ((p[2] & 0b11100000) << 5) // G
+			| ((p[2] << 3) & 0b11111000) | ((p[2] >> 2) & 0b111); // B
+	}
+	void get888as8888( uint8_t* p, uint32_t& c ){
+		c = (255 << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+	}
+	void get8888as8888( uint8_t* p, uint32_t& c ){
+		c = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+	}
+	void get8as8888( uint8_t* p, uint32_t& c ){
+		c = (255 << 24) | (p[0] << 16) | (p[0] << 8) | p[0];
+	}
+	void get1as8888( uint8_t* p, uint32_t& c ){
+		// Hijack 'c' as bit index (0-7 from left to right)
+		c = ((p[0] >> (7-c)) & 0b1)?RGB888_White:RGB888_Black;
+	}
+
+	/**
+	 * Use getAccessor8888 on a tilemap to choose the correct data access function.
+	 */
+	typedef void (*access8888)( uint8_t*, uint32_t& );
+	access8888 getAccessor8888( Tilemap* tilemap ){
+		switch (tilemap->pixelFormat){
+			case mac::PF_565: return get565as8888;
+			case mac::PF_4444: return get4444as8888;
+			case mac::PF_6666: return get6666as8888;
+			case mac::PF_8565: return get8565as8888;
+			case mac::PF_888: return get888as8888;
+			case mac::PF_8888: return get8888as8888;
+			case mac::PF_GRAYSCALE: return get8as8888;
+			case mac::PF_MONO: return get1as8888;
+			case mac::PF_INDEXED: return 0;	// XXX: Handle indexed colors
+			case mac::PF_UNKNOWN: return 0;
+		}
+		return 0;
+	}
+
+	/*
+	 * ### CONVERSION
+	 */
+
+	/**
+	 * Convert individual RGB values to RGB888 24bit format
+	 * @param	r		Red component
+	 * @param	g		Green component
+	 * @param	b		Blue component
+	 * @return		The RGB888 color
+	 **/
+	inline color888 convertRGBto888(
+		uint8_t r,
+		uint8_t g,
+		uint8_t b
+	){
+		return (r << 16) | (g << 8) | b;
+	}
+
+	/**
+	 * Converts RGB565 format to RGB888 format
+	 * @param	color	The RGB565 color to convert
+	 * @return		The RGB888 color
+	 **/
+	inline color888 convert565to888(
+		color565 c
+	){
+		return ((c & 0b1111100000000000) << 8) | ((c & 0b11100000000) << 3)
+			| ((c & 0b11111100000) << 5) | ((c & 0b11000000000) >> 1)
+			| ((c & 0b11111) << 3) | ((c & 0b11100) >> 2);
+	}
+
+	/**
+	 * Converts grayscale (8-bit) to RGB888 format
+	 * @param  c 	The grayscale value (0-255)
+	 * @return		The RGB888 color
+	 */
+	inline color888 convert8to888( uint8_t c ){
+		return (c << 16) | (c << 8) | c;
+	}
+
+	/**
+	 * Converts mono (1-bit) to RGB888 format
+	 * @param  c 	The mono value (0-1)
+	 * @return		The RGB888 color
+	 */
+	inline color888 convert1to888( uint8_t c ){
+		return (c & 0b1)?RGB888_White:RGB888_Black;
+	}
+
+	/**
+	 * Convert HSV to RGB888 24-bit
 	 * @param  H 	Hue component
 	 * @param  S  	Saturation component
 	 * @param  V 	Value component
+	 * @param  r  	(out) Red
+	 * @param  g 	(out) Green
+	 * @param  b 	(out) Blue
 	 */
-	inline colorRGB565 convertHSVto565(
+	inline color888 convertHSVto888(
 		float H,
 		float S,
 		float V
 	){
-		float		p, q, t, ff;
-		int8_t		i;
-		float		r,g,b;
+		uint8_t r, g, b;
+		convertHSVtoRGB(H,S,V,r,g,b);
+		return (r << 16) | (g << 8) | b;
+	}
 
-		if (H >= 360.0) H = 0.0;
-		H /= 60.0;
-		i = (int8_t)H;
-		ff = H - i;
-		p = V * (1.0 - S);
-		q = V * (1.0 - (S * ff));
-		t = V * (1.0 - (S * (1.0 - ff)));
+	/*
+	 * ### ALPHA BLENDING
+	 *
+	 * Base code found in XPRoger github
+	 * https://gist.github.com/XProger/96253e93baccfbf338de
+	 * Matches the 16 bit algorithm, but splits to two 32-bit numbers because of overflow
+	 * from the multiplication.
+	 **/
 
-		switch(i) {
-			case 0: r = V; g = t; b = p; break;
-			case 1: r = q; g = V; b = p; break;
-			case 2: r = p; g = V; b = t; break;
-			case 3: r = p; g = q; b = V; break;
-			case 4: r = t; g = p; b = V; break;
-			case 5:
-			default:
-				r = V; g = p; b = q; break;
-		}
+	/**
+	 * Convert alpha from range 0.0-1.0 to 0-255 (8 bit)
+	 * @param  a  	The alpha 0.0 - 1.0
+	 * @return   The 8-bit alpha value
+	 */
+	inline uint8_t alpha8bit( alpha a ){
+		return (uint8_t)( alphaClamp(a) * 255 );
+	}
 
-		return ((uint8_t)(r * 31.0f) << 11) | ((uint8_t)(g * 63.0f) << 5) | (uint8_t)(b * 31.0f);
+	/**
+	 * Calculate the pre-multiplied value of a 32-bit RGB color to the two
+	 * split components required for 888 fast blending.
+	 * @param color  	RGB888 color
+	 * @param color  	(out) RB split component
+	 * @param color  	(out) G split component
+	 */
+	inline void colorPrepare888( color888 c, uint32_t& rb, uint32_t& g ){
+		rb = c & 0xff00ff;
+		g  = c & 0x00ff00;
+	}
+
+	/**
+	 * Calculate the pre-multiplied value of RGB color components to the two
+	 * split components required for 888 fast blending.
+	 * @param r  		Red color component
+	 * @param g  		Green color component
+	 * @param b  		Blue color component
+	 * @param orb  	(out) RB split component
+	 * @param og  	(out) G split component
+	 */
+	inline void colorPrepare888( uint8_t r, uint8_t g, uint8_t b, uint32_t& orb, uint32_t& og ){
+		orb = (r << 16) | b;
+		og  = g << 8;
+	}
+
+	/**
+	 * Blend two RGB888 pixels
+	 * @param	fg		Color to draw in RGB 8-bit (24 bit)
+	 * @param	bg		Color to draw over in RGB 8-bit (24 bit)
+	 * @param	alpha	Alpha 0-255
+	 * @return       Blended color
+	 */
+	inline color888 alphaBlend8888(
+		color888 fg,
+		color888 bg,
+		uint8_t alpha
+	){
+		uint32_t rb = fg & 0xff00ff;
+		uint32_t g  = fg & 0x00ff00;
+		rb += ((bg & 0xff00ff) - rb) * alpha >> 8;
+		g  += ((bg & 0x00ff00) -  g) * alpha >> 8;
+		return (rb & 0xff00ff) | (g & 0xff00);
+	}
+
+	/**
+	 * Blend two RGB888 pixels
+	 * @param  preparedRB 	Pre-prepared RB split color components (@see colorPrepare888)
+	 * @param  preparedG 	Pre-prepared G split color components (@see colorPrepare888)
+	 * @param	bg			Color to draw over in RGB 8-bit (24 bit)
+	 * @param	alpha		Alpha 0-255
+	 * @return       Blended color
+	 */
+	inline color888 alphaBlendPrepared8888(
+		uint32_t preparedRB,
+		uint32_t preparedG,
+		color888 bg,
+		uint8_t alpha
+	){
+		preparedRB += ((bg & 0xff00ff) - preparedRB) * alpha >> 8;
+		preparedG  += ((bg & 0x00ff00) -  preparedG) * alpha >> 8;
+		return (preparedRB & 0xff00ff) | (preparedG & 0xff00);
 	}
 	
 } // ns

@@ -19,6 +19,7 @@ An image is cut into tiles from top to bottom, and left to right. The tilemap da
 ````
 typedef struct TilemapS {
 	PixelFormat pixelFormat;			// The format of each pixel
+    uint32_t transparentColor;          // For non-alpha pixel formats, the color to treat as fully transparent. Usually fuchsia.
 	uint32_t dataSize;					// The total number of 8-bit words in the data
 	const uint8_t* data __attribute__ ((aligned (4))); // Data, aligned to a 4-byte boundary
 	uint32_t tileWidth;					// Width of each tile in the map
