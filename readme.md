@@ -18,17 +18,17 @@ mac is still in development. Once it's ready for alpha release, I'll be updating
 An image is cut into tiles from top to bottom, and left to right. The tilemap data will contain the pixels for each tile one after the other. The definition of the tilemap is:
 ````
 typedef struct TilemapS {
-	PixelFormat pixelFormat;			// The format of each pixel
+    PixelFormat pixelFormat;            // The format of each pixel
     uint32_t transparentColor;          // For non-alpha pixel formats, the color to treat as fully transparent. Usually fuchsia.
-	uint32_t dataSize;					// The total number of 8-bit words in the data
-	const uint8_t* data __attribute__ ((aligned (4))); // Data, aligned to a 4-byte boundary
-	uint32_t tileWidth;					// Width of each tile in the map
-	uint32_t tileHeight;				// height of each tile in the map
-	uint32_t tileCount;					// Number of tiles in the map
-	uint32_t tileStride;				// Stride of each tile in 8-bit words
+    uint32_t dataSize;                  // The total number of bytes in the data
+    const uint8_t* data __attribute__ ((aligned (4))); // Data, aligned to 4-byte boundary
+    uint32_t tileWidth;                 // Width of each tile in the map
+    uint32_t tileHeight;                // height of each tile in the map
+    uint32_t tileCount;                 // Number of tiles in the map
+    uint32_t tileStride;                // Stride of each tile in bytes
 } Tilemap;
 ````
-A tile is accessed by it's index, not by it's x or y position in the original image. For example, a 100x100 image cut into 25x25 tiles will result in 16 tiles (index 0 to 15). You would access tile number 8 (index=7) like this:
+A tile is accessed by its index, not by its x or y position in the original image. For example, a 100x100 image cut into 25x25 tiles will result in 16 tiles (index 0 to 15). You would access tile number 8 (index=7) like this:
 ````
 // Code example 1
 // --------------
@@ -60,14 +60,14 @@ The following pixel formats are supported within a tilemap:
 You can preview what your image will look like in each of the pixel formats using the script `preview.py`. See help below.
 
 ## Rendering
-Rendering the tiles is handled by the user (i.e. you write the code), or alternatively the mac library has built-in support for fast rendering full alpha-blended tilemaps in 16-bit color. The included header file `Bitmap.h` contains a full set of 'accessor' functions to read pixels from the tilemap in the correct format, and convert them for display in either RGB565 or RGB888 format (whichever your display system or graphics library uses).
+Rendering the tiles is handled by the user (i.e. you write the code), or alternatively the mac library has built-in support for fast rendering full alpha-blended tilemaps in multiple color modes. The included header file `Bitmap.h` contains a full set of 'accessor' functions to read pixels from the tilemap in the correct format, and convert them for display in either RGB565 or RGB888 format (whichever your display system or graphics library uses).
 
 Following on from code example 1, this is how you would read a pixel from a tilemap. In this example, the tilemap data is stored as RGB565 format, and the user is reading it as RGB888 i.e. as individual 8-bit R, G and B components.
 ````
 // Code example 2
 // --------------
 // Use the supplied method to grab the correct accessor function, then step through the pixels in the tile.
-access8888 myPixelAccessor = getAccessor8888( tilemap );
+access8888 myPixelAccessor = getAccessor8888( tilemap.pixelFormat );
 uint8_t r,g,b,a;
 int16_t tileIndex = 7; // Access the 8th tile
 uint8_t* dataPointer = tilemap.data + (tilemap.tileStride * tileIndex);

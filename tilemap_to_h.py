@@ -97,13 +97,13 @@ def pixel4444( a, r, g, b ):
 def pixel6666( a, r, g, b ):
 	# first place in single 24-bit number, then split
 	p = int((a << 16) & 0b111111000000000000000000) | int((r << 10) & 0b000000111111000000000000) | int((g<<4) & 0b000000000000111111000000) | int((b >> 2) & 0b000000000000000000111111)
-	return [int(p & 0b000000000000000011111111),int((p >> 8) & 0b000000000000000011111111),int((p>>16) & 0b000000000000000011111111)]
+	return [int((p>>16) & 255),int((p>>8) & 255),int(p & 255)]
 
 # 8565 as three 8-bit unsigned ints
 def pixel8565( a, r, g, b ):
 	# first place in single 24-bit number, then split
 	p = int((a << 16) & 0b111111110000000000000000) | int((r << 8) & 0b000000001111100000000000) | int((g<<3) & 0b000000000000011111100000) | int((b >> 3) & 0b000000000000000000011111)
-	return [int(p & 0b000000000000000011111111),int((p >> 8) & 0b000000000000000011111111),int((p>>16) & 0b000000000000000011111111)]
+	return [int((p>>16) & 255),int((p>>8) & 255),int(p & 255)]
 
 # 8888 as four 8-bit unsigned ints 
 def pixel8888( a, r, g, b ):
@@ -273,7 +273,7 @@ for file in list(resources):
 		tp = 0
 		f = True
 		print(' ',len(p),'bytes in output as 8-bit words');
-		# Step pixels and output in groups of 48
+		# Step pixels and output in groups of 36
 		for pc in p:
 			if f:
 				outstr += ' '
