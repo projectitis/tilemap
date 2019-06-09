@@ -3,7 +3,7 @@ Tilemap helpers and code, aimed at microprocessors
 
 ## mac
 This file is part of the mac (or μac) "Microprocessor App Creator" library.
-mac is a project that enables creating beautiful and useful apps on the [Teensy microprocessor](https://www.pjrc.com/teensy/), but hopefully is generic enough to be ported to other microprocessor boards. The various libraries that make up mac (includign this one) might also be useful in other projects.
+mac is a project that enables creating beautiful and useful apps on the [Teensy microprocessor](https://www.pjrc.com/teensy/), but hopefully is generic enough to be ported to other microprocessor boards. The various libraries that make up mac (including this one) might also be useful in other projects.
 
 # Status
 **Work in progress! Use at own risk.**
@@ -12,7 +12,7 @@ mac is still in development. Once it's ready for alpha release, I'll be updating
 ## tilemap (tilemap_to_h.py)
 `Bitmap.h` contains a tilemap type (`Tilemap`) that describes pixels packed into a tile map in a header file. There is a script (`tilemap_to_h.py`) to convert images to the tilemap format. When it is run it will convert all images in the same directory into tilemaps, each with it's own .h file. Options for the script can be specified in the file name of the image. For example:
  
-* `gui_icons.t-24x24.p-RGB565.png` will cut the png into 24x24 pixel tiles, and convert each pixel to RGB565 format (tile tilemap will contain RGB565 pixels).
+* `gui_icons.t-24x24.p-RGB565.png` will cut the png into 24x24 pixel tiles, and convert each pixel to RGB565 format (tilemap will contain RGB565 pixels).
 * `character_sprites.t-30x60.p-6666.png` will create a tilemap of 30x60 pixel tiles in ARGB6666 format (24-bits total, 6-bits each for alpha, R, G and B).
  
 An image is cut into tiles from top to bottom, and left to right. The tilemap data will contain the pixels for each tile one after the other. The definition of the tilemap is:
@@ -43,7 +43,7 @@ A tile is accessed by its index, not by its x or y position in the original imag
 int16_t tileIndex = 7; // Access the 8th tile
 uint8_t* startOfTileData = tilemap.data + (tilemap.tileStride * tileIndex);
 // or
-uint8_t* startOfTileData = tilemap.data[tilemap.tileStride * tileIndex];
+uint8_t* startOfTileData = &tilemap.data[tilemap.tileStride * tileIndex];
 ````
 See the notes in `tilemap_to_h.py`, and the comments in `Bitmap.h`, for more details.
  
@@ -60,7 +60,7 @@ The following pixel formats are supported within a tilemap:
 You can preview what your image will look like in each of the pixel formats using the script `preview.py`. See help below.
 
 ## Rendering
-Rendering the tiles is handled by the user (i.e. you write the code), or alternatively the mac library has built-in support for fast rendering full alpha-blended tilemaps in multiple color modes. The included header file `Bitmap.h` contains a full set of 'accessor' functions to read pixels from the tilemap in the correct format, and convert them for display in either RGB565 or RGB888 format (whichever your display system or graphics library uses).
+Rendering the tiles is handled by the user (i.e. you write the code). Alternatively the mac library has built-in support for fast rendering full alpha-blended tilemaps in multiple color modes. The included header file `Bitmap.h` contains a full set of 'accessor' functions to read pixels from the tilemap in the correct format, and convert them for display in either RGB565 or RGB888 format (whichever your display system or graphics library uses).
 
 Following on from code example 1, this is how you would read a pixel from a tilemap. In this example, the tilemap data is stored as RGB565 format, and the user is reading it as RGB888 i.e. as individual 8-bit R, G and B components.
 ````
@@ -105,12 +105,12 @@ You can preview what your tilemap will look like in different image formats by r
 
 For every image, a preview image will be generated that is twice as wide and twice as high as the original. It contains the same image four times:
 
-* The top-left image is the original image
-* The top-right image is converted to RGB565 (or ARGB8565 if the source image contains alpha)
-* The bottom-left image is converted to RGB444 (or ARGB 4444 if the source image contains alpha)
-* The bottom-right image is converted to RGB666 (or ARGB 6666 if the source image contains alpha)
+* The top-left image is the original image, presumably in RGB 888 (or ARGB 8888 if the source image contains alpha)
+* The top-right image is converted to RGB 565 / ARGB 8565
+* The bottom-left image is converted to RGB 444 / ARGB 4444
+* The bottom-right image is converted to RGB 666 / ARGB 6666
 
-Actually, the pixels are down-sampled to the lower format, and then up-sampled again to the orignal format (most likely RGB8888), but this gives the same effect as viewing the image in the down-sampled pixel format. Open the preview image in your image editor to get a close look at the result.
+Actually, the pixels are down-sampled to the lower format, and then up-sampled again to the orignal format (most likely RGB 888), but this gives the same effect as viewing the image in the down-sampled pixel format. Open the preview image in your image editor to get a close look at the result.
 
 For example, the 100x100 image `gui_icons.t-25x25.p-565.png` will result in a new image called `preview.gui_icons.png` which is 200x200 pixels.
 
